@@ -18,8 +18,10 @@ namespace net = boost::asio;
 namespace ip = net::ip;
 
 OnlineTranslatorsManager::OnlineTranslatorsManager(const std::string& config_filepath) {     
+    std::cout << "DEBUG: Inside OnlineTranslatorsManager constructor, before load_api_keys_from_file" << std::endl;
     api_keys_ = load_api_keys_from_file(config_filepath); 
     std::cout << "The API keys have been successfully loaded from the file: " << config_filepath << std::endl;
+    std::cout << "DEBUG: Inside OnlineTranslatorsManager constructor, after load_api_keys_from_file and message" << std::endl;
 }
 
 
@@ -31,6 +33,7 @@ std::vector<TranslationResult> OnlineTranslatorsManager::GetTranslations(
 {
     std::vector<TranslationResult> results; 
 // ------ Яндекс ------
+    std::cout << "DEBUG: Entering GetTranslations" << std::endl;
     try { 
         std::pair<std::string, std::vector<std::pair<std::string, std::string>>> yandex_request_data =
             PrepareYandexRequest(text, source_lang, target_lang);
@@ -38,26 +41,28 @@ std::vector<TranslationResult> OnlineTranslatorsManager::GetTranslations(
         // URL API Яндекса v2 (из документации): POST https://translate.api.cloud.yandex.net/translate/v2/translate
         std::string yandex_api_url = "translate.api.cloud.yandex.net:443";
         std::string yandex_target = "/translate/v2/translate";
-
+        
+        std::cout << "DEBUG: Before GetTranslationFromOne (Yandex)" << std::endl;
         TranslationResult yandex_result = GetTranslationFromOne(
-            "Яндекс.Облако",
+            "Yandex.Cloud",
             yandex_api_url,
             yandex_target,
             http::verb::post,
             yandex_request_data.first,
             yandex_request_data.second
         );
+        std::cout << "DEBUG: After GetTranslationFromOne (Yandex)" << std::endl;
         results.push_back(yandex_result);
 
     } catch (const std::exception& e) {
-        std::cerr << "Ошибка при запросе к Яндекс.Облако: " << e.what() << std::endl;
-        results.push_back(TranslationResult("Яндекс.Облако", "", false, e.what()));
+        std::cerr << "Error when making a request to Yandex.Cloud: " << e.what() << std::endl;
+        results.push_back(TranslationResult("Yandex.Cloud", "", false, e.what()));
     }
     // ------ В будущем тут будут запросы ко второму и третьему переводчикам ------
     // Пока добавляем заглушки для демонстрации структуры с 3+ источниками.
-    results.push_back(TranslationResult("Второй Переводчик (заглушка)", "Перевод от второго (заглушка)", true));
-    results.push_back(TranslationResult("Третий Переводчик (заглушка)", "Перевод от третьего (заглушка)", true));
-    
+    results.push_back(TranslationResult("The second Translator (stub)", "Translation from the second (blank)", true));
+    results.push_back(TranslationResult("Third Translator (stub)", "Translation from the third (blank)", true));
+    std::cout << "DEBUG: Exiting GetTranslations" << std::endl;
     return results; 
 }
 
@@ -70,7 +75,8 @@ TranslationResult OnlineTranslatorsManager::GetTranslationFromOne(
     const std::string& request_body,
     const std::vector<std::pair<std::string, std::string>>& headers)
 {
-    std::string translated_text = "Ошибка: Не удалось получить перевод";
+    std::cout << "DEBUG: Entering GetTranslationFromOne" << std::endl;
+    std::string translated_text = "Error: The transfer could not be received";
     bool success = false;
     std::string error_message = "";
 
@@ -86,15 +92,16 @@ TranslationResult OnlineTranslatorsManager::GetTranslationFromOne(
              port = url.substr(colon_pos + 1);
         }
 
-        // HttpClient::SendRequest пока не поддерживает HTTPS!
+        std::cout << "DEBUG: Before SendRequest call" << std::endl;
         std::string response_body = http_client_.SendRequest(
             host, port, target, method, request_body, headers
         );
+        std::cout << "DEBUG: After SendRequest call" << std::endl;
 
         // --- Разбор JSON ответа ---
-        if (translator_name == "Яндекс.Облако") {
+        if (translator_name == "Yandex.Cloud") {
             translated_text = ParseYandexResponse(response_body);
-            if (translated_text.find("Ошибка") == std::string::npos) {
+            if (translated_text.find("Error") == std::string::npos) {
                 success = true;
                 error_message = "";
             } else {
@@ -111,7 +118,7 @@ TranslationResult OnlineTranslatorsManager::GetTranslationFromOne(
         success = false;
         translated_text = "";
     }
-
+    std::cout << "DEBUG: Exiting GetTranslationFromOne" << std::endl;
     return TranslationResult(translator_name, translated_text, success, error_message); 
 }
 
@@ -142,14 +149,14 @@ std::string OnlineTranslatorsManager::ParseYandexResponse(const std::string& res
 
         // Проверка: является ли верхний уровень объектом и есть ли в нем массив "translations"
         if (!jv.is_object() || !jv.as_object().count("translations") || !jv.as_object()["translations"].is_array()) {
-            return "Ошибка разбора ответа Яндекса: неверная структура ответа.";
+            return "Error parsing the Yandex response: incorrect response structure.";
         }
 
         json::array translations_array = jv.as_object()["translations"].as_array(); // Получаем ссылку на массив переводов
 
         // Проверка: не пуст ли массив "translations"
         if (translations_array.empty()) {
-            return "Ошибка разбора ответа Яндекса: массив переводов пуст.";
+            return "Error parsing the Yandex response: the transfer array is empty.";
         }
 
         // Проверка: является ли первый элемент массива объектом и есть ли в нем строка "text"
@@ -159,18 +166,18 @@ std::string OnlineTranslatorsManager::ParseYandexResponse(const std::string& res
                 // УСПЕХ: Извлекаем строку перевода из поля "text" объекта
                 return std::string(translation_obj.at("text").as_string().c_str()); // <-- Исправлено здесь
             } else {
-                return "Ошибка разбора ответа Яндекса: неверный формат поля 'text' в первом переводе.";
+                return "Error parsing the Yandex response: incorrect format of the 'text' field in the first translation.";
             }
         } else {
-            return "Ошибка разбора ответа Яндекса: первый элемент массива переводов не является объектом.";
+            return "Error parsing the Yandex response: the first element of the translation array is not an object.";
         }
 
     } catch (const boost::system::system_error& e) {
-        std::cerr << "Ошибка парсинга JSON ответа Яндекса: " << e.what() << std::endl;
-        return "Ошибка парсинга ответа Яндекса.";
+        std::cerr << "Error parsing the Yandex JSON response: " << e.what() << std::endl;
+        return "Error parsing the Yandex response.";
     } catch (const std::exception& e) {
-        std::cerr << "Ошибка при обработке JSON ответа Яндекса (структура): " << e.what() << std::endl;
-        return "Ошибка обработки ответа Яндекса (структура).";
+        std::cerr << "Error processing the Yandex JSON response (structure): " << e.what() << std::endl;
+        return "Error processing the Yandex response (structure).";
     }
 }
 
