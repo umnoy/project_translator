@@ -18,7 +18,8 @@ ApiKeys load_api_keys_from_file(const std::string& filepath) {
 
      if (!file.is_open()) { 
           std::stringstream ss;
-          ss << "ОШИБКА НАСТРОЙКИ: Не удалось открыть файл конфигурации '" << filepath << "'. Убедитесь, что файл существует и доступен.";
+          
+          ss << "CONFIGURATION ERROR: Failed to open configuration file '" << filepath << "'. Ensure the file exists and is accessible.";
           throw std::runtime_error(ss.str());
      }
 
@@ -33,7 +34,7 @@ ApiKeys load_api_keys_from_file(const std::string& filepath) {
 
      if (ec) { 
           std::stringstream ss;
-          ss << "ОШИБКА НАСТРОЙКИ: Ошибка разбора JSON в файле '" << filepath << "': " << ec.message();
+          ss << "CONFIGURATION ERROR: JSON parsing error in file '" << filepath << "': " << ec.message();
           throw std::runtime_error(ss.str());
      }
 
@@ -45,10 +46,10 @@ ApiKeys load_api_keys_from_file(const std::string& filepath) {
                if (yandex_obj.count("api_key") && yandex_obj.at("api_key").is_string()) {
                     keys.yandex_key = std::string(yandex_obj.at("api_key").as_string().c_str());
                } else {
-                    std::cerr << "Предупреждение: Ключ 'yandex_translate.api_key' не найден или имеет неверный формат в файле '" << filepath << "'." << std::endl;
+                    std::cerr << "Warning: The key 'yandex_translate.api_key' was not found or has an incorrect format in the file '" << filepath << "'." << std::endl;
                }
           } else {
-               std::cerr << "Предупреждение: Раздел 'yandex_translate' не найден в файле '" << filepath << "'." << std::endl;
+               std::cerr << "Warning: The 'yandex_translate' section was not found in the file '" << filepath << "'." << std::endl;
           }
 /*
         // Пример для Azure: ищем "azure_translator" -> "subscription_key" и "region"
@@ -83,7 +84,7 @@ ApiKeys load_api_keys_from_file(const std::string& filepath) {
 
      } catch (const std::exception& e) { // Ловим другие ошибки при извлечении данных (например, если at() выкинул исключение)
           std::stringstream ss;
-          ss << "ОШИБКА НАСТРОЙКИ: Ошибка извлечения данных из JSON в файле '" << filepath << "': " << e.what();
+          ss << "CONFIGURATION ERROR: Error extracting data from a JSON file '" << filepath << "': " << e.what();
           throw std::runtime_error(ss.str());
      }
 
