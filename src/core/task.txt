@@ -1,1 +1,2 @@
 model, 2 languages, exeptions
+initialized core 
