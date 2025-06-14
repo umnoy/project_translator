@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(TranslatorProject CXX) 
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 add_definitions(-D_WIN32_WINNT=0x0601)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) 
 set(CMAKE_CXX_EXTENSIONS OFF) 
