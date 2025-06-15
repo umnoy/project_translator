@@ -3,8 +3,8 @@ from optimum.exporters.onnx import main_export
 from optimum.exporters.onnx.config import OnnxConfig
 from pathlib import Path
 
-model_id = "Helsinki-NLP/opus-mt-ru-en"
-output_dir = Path("../models/opus-mt-ru-en")
+model_id = "Helsinki-NLP/opus-mt-en-ru"
+output_dir = Path("../models/opus-mt-en-ru")
 
 main_export(
     model_name_or_path=model_id,

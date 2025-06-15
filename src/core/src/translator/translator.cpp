@@ -40,11 +40,11 @@ Translator::Translator(const Tokenizer tokenizer, const string &encoder_path,
       GraphOptimizationLevel::ORT_ENABLE_ALL);
 
   // Преобразование std::string в std::wstring для ONNX Runtime
-  std::wstring w_encoder_path = std::wstring(encoder_path.begin(), encoder_path.end());
-  std::wstring w_decoder_path = std::wstring(decoder_path.begin(), decoder_path.end());
+ //std::wstring w_encoder_path = std::wstring(encoder_path.begin(), encoder_path.end());
+ //std::wstring w_decoder_path = std::wstring(decoder_path.begin(), decoder_path.end());
 
-  encoder_session = Ort::Session(env, w_encoder_path.c_str(), session_options);
-  decoder_session = Ort::Session(env, w_decoder_path.c_str(), session_options);
+  encoder_session = Ort::Session(env, encoder_path.c_str(), session_options);
+  decoder_session = Ort::Session(env, decoder_path.c_str(), session_options);
 }
 
 string Translator::run(const string &input) {
@@ -52,116 +52,117 @@ string Translator::run(const string &input) {
   vector<int64_t> attention_mask(input_ids.size(), 1);
   vector<float> encoder_hidden = encode_input(input_ids);
 
-  // priority_queue<Beam> beams;
-  // beams.push({{pad_token_id}, 0.0f});
-  //
-  // vector<Beam> completed_beams;
-  //
-  // for (int step = 0; step < max_length; ++step) {
-  //   priority_queue<Beam> new_beams;
-  //
-  //   while (!beams.empty()) {
-  //     Beam beam = beams.top();
-  //     beams.pop();
-  //
-  //     // Если уже завершена (по EOS), добавим в список завершённых
-  //     if (!beam.tokens.empty() && beam.tokens.back() == eos_token_id) {
-  //       completed_beams.push_back(beam);
-  //       continue;
-  //     }
-  //
-  //     vector<float> logits =
-  //         decode_step(beam.tokens, attention_mask, encoder_hidden);
-  //     vector<float> probs = softmax(logits);
-  //     auto topk = top_k(probs, beam_width);
-  //
-  //     for (auto &[token_id, prob] : topk) {
-  //       Beam new_beam = beam;
-  //       new_beam.tokens.push_back(token_id);
-  //       new_beam.score += log(prob + 1e-8f); // лог вероятности
-  //       new_beams.push(new_beam);
-  //       if ((int)new_beams.size() > beam_width) {
-  //         // удалим худший
-  //         priority_queue<Beam> tmp;
-  //         while (new_beams.size() > 1) {
-  //           tmp.push(new_beams.top());
-  //           new_beams.pop();
-  //         }
-  //         new_beams = tmp;
-  //       }
-  //     }
-  //   }
-  //
-  //   if (new_beams.empty())
-  //     break;
-  //
-  //   beams = new_beams;
-  // }
-  //
-  // // Выбираем: сначала среди завершённых, иначе — среди текущих
-  // Beam best;
-  // if (!completed_beams.empty()) {
-  //   best = *max_element(
-  //       completed_beams.begin(), completed_beams.end(),
-  //       [](const Beam &a, const Beam &b) { return a.score < b.score; });
-  // } else if (!beams.empty()) {
-  //   best = beams.top();
-  // } else {
-  //   return "";
-  // }
-  //
-  // return tokenizer.decode(best.tokens);
+   priority_queue<Beam> beams;
+   beams.push({{pad_token_id}, 0.0f});
+  
+   vector<Beam> completed_beams;
+  
+   for (int step = 0; step < max_length; ++step) {
+     priority_queue<Beam> new_beams;
+  
+     while (!beams.empty()) {
+       Beam beam = beams.top();
+       beams.pop();
+  
+       // Если уже завершена (по EOS), добавим в список завершённых
+       if (!beam.tokens.empty() && beam.tokens.back() == eos_token_id) {
+         completed_beams.push_back(beam);
+         continue;
+       }
+  
+       vector<float> logits =
+           decode_step(beam.tokens, attention_mask, encoder_hidden);
+       vector<float> probs = softmax(logits);
+       auto topk = top_k(probs, beam_width);
+  
+       for (auto &[token_id, prob] : topk) {
+         Beam new_beam = beam;
+         new_beam.tokens.push_back(token_id);
+         new_beam.score += log(prob + 1e-8f); // лог вероятности
+         new_beams.push(new_beam);
+         if ((int)new_beams.size() > beam_width) {
+           // удалим худший
+           priority_queue<Beam> tmp;
+           while (new_beams.size() > 1) {
+             tmp.push(new_beams.top());
+             new_beams.pop();
+           }
+           new_beams = tmp;
+         }
+       }
+     }
+  
+     if (new_beams.empty())
+       break;
+  
+     beams = new_beams;
+   }
+  
+   // Выбираем: сначала среди завершённых, иначе — среди текущих
+   Beam best;
+   if (!completed_beams.empty()) {
+     best = *max_element(
+         completed_beams.begin(), completed_beams.end(),
+         [](const Beam &a, const Beam &b) { return a.score < b.score; });
+   } else if (!beams.empty()) {
+     best = beams.top();
+   } else {
+     return "";
+   }
+  
+   return tokenizer.decode(best.tokens);
 
-  priority_queue<Beam> beams;
-  vector<Beam> finished_beams;
+ //
+ //priority_queue<Beam> beams;
+ //vector<Beam> finished_beams;
 
-  for (int step = 0; step < max_length; ++step) {
-    priority_queue<Beam> new_beams;
+ // for (int step = 0; step < max_length; ++step) {
+ //   priority_queue<Beam> new_beams;
 
-    while (!beams.empty()) {
-      Beam beam = beams.top();
-      beams.pop();
+ //   while (!beams.empty()) {
+ //     Beam beam = beams.top();
+ //     beams.pop();
 
-      // Расширяем beam
-      vector<float> logits =
-          decode_step(beam.tokens, attention_mask, encoder_hidden);
-      vector<float> probs = softmax(logits);
-      auto topk = top_k(probs, beam_width);
+ //     // Расширяем beam
+ //     vector<float> logits =
+ //         decode_step(beam.tokens, attention_mask, encoder_hidden);
+ //     vector<float> probs = softmax(logits);
+ //     auto topk = top_k(probs, beam_width);
 
-      for (auto &[token_id, prob] : topk) {
-        Beam new_beam = beam;
-        new_beam.tokens.push_back(token_id);
-        new_beam.score += log(prob + 1e-8f);
+ //     for (auto &[token_id, prob] : topk) {
+ //       Beam new_beam = beam;
+ //       new_beam.tokens.push_back(token_id);
+ //       new_beam.score += log(prob + 1e-8f);
 
-        // 🧠 Если токен — EOS, кладём в finished_beams
-        if (token_id == eos_token_id) {
-          finished_beams.push_back(new_beam);
-        } else {
-          new_beams.push(new_beam);
-          if ((int)new_beams.size() > beam_width)
-            new_beams.pop();
-        }
-      }
-    }
+ //       // 🧠 Если токен — EOS, кладём в finished_beams
+ //       if (token_id == eos_token_id) {
+ //         finished_beams.push_back(new_beam);
+ //       } else {
+ //         new_beams.push(new_beam);
+ //         if ((int)new_beams.size() > beam_width)
+ //           new_beams.pop();
+ //       }
+ //     }
+ //  }
 
-    if (new_beams.empty())
-      break;
-    beams = new_beams;
-  }
+ //  if (new_beams.empty())
+ //     break;
+ //   beams = new_beams;
+ // }
 
-  // ✅ Если есть завершённые — выбрать лучший
-  if (!finished_beams.empty()) {
-    const Beam &best = *max_element(
-        finished_beams.begin(), finished_beams.end(),
-        [](const Beam &a, const Beam &b) { return a.score < b.score; });
-    return tokenizer.decode(best.tokens);
-  }
-  // ✅ Иначе — лучший незавершённый
-  else if (!beams.empty()) {
-    return tokenizer.decode(beams.top().tokens);
-  } else {
-    return "";
-  }
+ // // ✅ Если есть завершённые — выбрать лучший
+ // if (!finished_beams.empty()) {
+ //   const Beam &best = *max_element(
+ //       finished_beams.begin(), finished_beams.end(),
+ //       [](const Beam &a, const Beam &b) { return a.score < b.score; });
+ //   return tokenizer.decode(best.tokens);
+ // }
+ // // ✅ Иначе — лучший незавершённый
+ // else if (!beams.empty()) {
+ //   return tokenizer.decode(beams.top().tokens);
+ // } else {
+ //   return "";
+ // }
 }
 
 vector<float> Translator::encode_input(const vector<int64_t> &input_ids) {

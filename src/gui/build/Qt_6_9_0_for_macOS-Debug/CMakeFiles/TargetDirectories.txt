@@ -1,9 +1,0 @@
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/c_project.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/edit_cache.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/rebuild_cache.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/list_install_components.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/install.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/install/local.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/install/strip.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/c_project_autogen_timestamp_deps.dir
-/Users/mihailmedvedev/module4_project/build/Qt_6_9_0_for_macOS-Debug/CMakeFiles/c_project_autogen.dir
